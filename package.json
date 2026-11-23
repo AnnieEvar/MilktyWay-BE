@@ -1,0 +1,65 @@
+{
+  "name": "milktyway-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:generate": "prisma generate",
+    "db:validate": "prisma validate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "provision:staff": "tsx scripts/provision-staff.ts",
+    "test": "vitest run",
+    "test:integration": "tsx scripts/test-integration.ts",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run db:validate && npm test && npm run test:integration && npm run build"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "@scalar/api-reference": "1.83.0",
+    "@scalar/express-api-reference": "0.10.41",
+    "argon2": "0.45.2",
+    "cookie-parser": "1.4.7",
+    "cors": "2.8.6",
+    "dotenv": "17.4.2",
+    "express": "5.3.0",
+    "helmet": "8.3.0",
+    "jose": "6.2.18",
+    "pg": "8.23.1",
+    "pino": "10.4.0",
+    "pino-http": "11.0.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-parser": "12.1.0",
+    "@eslint/js": "10.0.1",
+    "@types/cookie-parser": "1.4.10",
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.6",
+    "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
+    "@types/supertest": "6.0.3",
+    "embedded-postgres": "17.12.0-beta.19",
+    "eslint": "10.15.0",
+    "prettier": "3.10.1",
+    "prisma": "7.10.1",
+    "supertest": "7.3.2",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.73.0",
+    "vitest": "5.1.1"
+  },
+  "overrides": {
+    "effect": "3.22.5"
+  }
+}
