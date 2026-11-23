@@ -147,3 +147,6 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Personal work notes and progress tracking (local only)
+/doc/.me/
