@@ -50,7 +50,7 @@ async function otpSession(phone = "0900000001") {
 
 beforeAll(async () => {
   container = await createContainer(config, runtime, { clock: () => now, otp: { deliver: async (input) => { mailbox.set(input.challengeId, input); } } });
-  app = createApp({ config, service: container.service, logger: pino({ enabled: false }), ready: async () => { await runtime.$queryRaw`SELECT 1`; } });
+  app = createApp({ config, service: container.service, branchService: container.branchService, logger: pino({ enabled: false }), ready: async () => { await runtime.$queryRaw`SELECT 1`; } });
 });
 beforeEach(async () => {
   now = new Date(); mailbox.clear();

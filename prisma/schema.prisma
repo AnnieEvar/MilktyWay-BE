@@ -12,159 +12,213 @@ enum StaffRole {
   BRANCH_MANAGER
   POS_STAFF
   INVENTORY_STAFF
+
   @@map("staff_role")
 }
 
 enum AccountStatus {
   ACTIVE
   LOCKED
+
   @@map("account_status")
 }
 
 enum SessionKind {
   STAFF
   CUSTOMER
+
   @@map("session_kind")
 }
 
 model User {
-  id           String        @id @default(uuid()) @map("user_id") @db.Uuid
-  employeeCode String        @unique @map("employee_code")
-  email        String        @unique
-  fullName     String        @map("full_name")
-  passwordHash String        @map("password_hash")
-  role         StaffRole
-  status       AccountStatus @default(ACTIVE)
-  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  assignments  StaffAssignment[]
-  sessions     AuthSession[]
+  id               String            @id @default(uuid()) @map("user_id") @db.Uuid
+  employeeCode     String            @unique @map("employee_code")
+  email            String            @unique
+  fullName         String            @map("full_name")
+  passwordHash     String            @map("password_hash")
+  role             StaffRole
+  status           AccountStatus     @default(ACTIVE)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  assignments      StaffAssignment[]
+  sessions         AuthSession[]
+  openedCashShifts CashShift[]       @relation("CashShiftOpener")
+  closedCashShifts CashShift[]       @relation("CashShiftCloser")
+
   @@map("users")
 }
 
 // Reference models owned by BR; AU does not expose branch/warehouse creation APIs.
 model Branch {
-  id          String @id @default(uuid()) @map("branch_id") @db.Uuid
-  code        String @unique
-  name        String
-  isActive    Boolean @default(true) @map("is_active")
-  assignments StaffAssignment[]
-  warehouses  Warehouse[]
-  terminals   PosTerminal[]
+  id               String            @id @default(uuid()) @map("branch_id") @db.Uuid
+  code             String            @unique
+  name             String
+  isActive         Boolean           @default(true) @map("is_active")
+  address          String            @default("")
+  phone            String?
+  operatingHours   String            @default("") @map("operating_hours")
+  acceptsOnline    Boolean           @default(true) @map("accepts_online")
+  maxPendingOnline Int               @default(20) @map("max_pending_online")
+  assignments      StaffAssignment[]
+  warehouses       Warehouse[]
+  terminals        PosTerminal[]
+  deliveryZones    DeliveryZone[]
+
   @@map("branches")
 }
 
 model Warehouse {
-  id          String @id @default(uuid()) @map("warehouse_id") @db.Uuid
-  code        String @unique
+  id          String            @id @default(uuid()) @map("warehouse_id") @db.Uuid
+  code        String            @unique
   name        String
-  branchId    String? @map("branch_id") @db.Uuid
-  isActive    Boolean @default(true) @map("is_active")
-  branch      Branch? @relation(fields: [branchId], references: [id])
+  branchId    String?           @map("branch_id") @db.Uuid
+  isActive    Boolean           @default(true) @map("is_active")
+  branch      Branch?           @relation(fields: [branchId], references: [id])
   assignments StaffAssignment[]
+
   @@map("warehouses")
 }
 
 model PosTerminal {
-  id          String @id @default(uuid()) @map("terminal_id") @db.Uuid
+  id          String            @id @default(uuid()) @map("terminal_id") @db.Uuid
   code        String
-  branchId    String @map("branch_id") @db.Uuid
-  isActive    Boolean @default(true) @map("is_active")
-  branch      Branch @relation(fields: [branchId], references: [id])
+  branchId    String            @map("branch_id") @db.Uuid
+  isActive    Boolean           @default(true) @map("is_active")
+  branch      Branch            @relation(fields: [branchId], references: [id])
   assignments StaffAssignment[]
+  cashShifts  CashShift[]
+
   @@unique([branchId, code])
   @@map("pos_terminals")
 }
 
+model DeliveryZone {
+  id       String  @id @default(uuid()) @map("zone_id") @db.Uuid
+  branchId String  @map("branch_id") @db.Uuid
+  name     String
+  areaCode String  @map("area_code")
+  feeVnd   Int     @default(0) @map("fee_vnd")
+  isActive Boolean @default(true) @map("is_active")
+  branch   Branch  @relation(fields: [branchId], references: [id])
+
+  @@unique([branchId, areaCode])
+  @@map("delivery_zones")
+}
+
+model CashShift {
+  id             String      @id @default(uuid()) @map("shift_id") @db.Uuid
+  terminalId     String      @map("terminal_id") @db.Uuid
+  openedById     String      @map("opened_by_id") @db.Uuid
+  closedById     String?     @map("closed_by_id") @db.Uuid
+  openedAt       DateTime    @map("opened_at") @db.Timestamptz(3)
+  closedAt       DateTime?   @map("closed_at") @db.Timestamptz(3)
+  openingCashVnd Int         @map("opening_cash_vnd")
+  closingCashVnd Int?        @map("closing_cash_vnd")
+  note           String?
+  terminal       PosTerminal @relation(fields: [terminalId], references: [id])
+  openedBy       User        @relation("CashShiftOpener", fields: [openedById], references: [id])
+  closedBy       User?       @relation("CashShiftCloser", fields: [closedById], references: [id])
+
+  @@index([terminalId, openedAt])
+  @@map("cash_shifts")
+}
+
 model StaffAssignment {
-  id          String @id @default(uuid()) @map("assignment_id") @db.Uuid
-  userId      String @map("user_id") @db.Uuid
-  branchId    String? @map("branch_id") @db.Uuid
-  warehouseId String? @map("warehouse_id") @db.Uuid
-  terminalId  String? @map("terminal_id") @db.Uuid
-  startedAt   DateTime @default(now()) @map("started_at") @db.Timestamptz(3)
-  endedAt     DateTime? @map("ended_at") @db.Timestamptz(3)
-  user        User @relation(fields: [userId], references: [id])
-  branch      Branch? @relation(fields: [branchId], references: [id])
-  warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
+  id          String       @id @default(uuid()) @map("assignment_id") @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  branchId    String?      @map("branch_id") @db.Uuid
+  warehouseId String?      @map("warehouse_id") @db.Uuid
+  terminalId  String?      @map("terminal_id") @db.Uuid
+  startedAt   DateTime     @default(now()) @map("started_at") @db.Timestamptz(3)
+  endedAt     DateTime?    @map("ended_at") @db.Timestamptz(3)
+  user        User         @relation(fields: [userId], references: [id])
+  branch      Branch?      @relation(fields: [branchId], references: [id])
+  warehouse   Warehouse?   @relation(fields: [warehouseId], references: [id])
   terminal    PosTerminal? @relation(fields: [terminalId], references: [id])
+
   @@index([userId, endedAt])
   @@index([branchId, endedAt])
   @@map("staff_assignments")
 }
 
 model Customer {
-  id          String @id @default(uuid()) @map("customer_id") @db.Uuid
-  phone       String @unique
-  verifiedAt  DateTime @map("verified_at") @db.Timestamptz(3)
-  fullName    String? @map("full_name")
-  email       String?
-  joinedAt    DateTime? @map("joined_at") @db.Timestamptz(3)
-  consentAt   DateTime? @map("consent_at") @db.Timestamptz(3)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
-  sessions    AuthSession[]
+  id         String        @id @default(uuid()) @map("customer_id") @db.Uuid
+  phone      String        @unique
+  verifiedAt DateTime      @map("verified_at") @db.Timestamptz(3)
+  fullName   String?       @map("full_name")
+  email      String?
+  joinedAt   DateTime?     @map("joined_at") @db.Timestamptz(3)
+  consentAt  DateTime?     @map("consent_at") @db.Timestamptz(3)
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  sessions   AuthSession[]
+
   @@map("customers")
 }
 
 model AuthSession {
-  id           String @id @default(uuid()) @map("session_id") @db.Uuid
-  kind         SessionKind
-  userId       String? @map("user_id") @db.Uuid
-  customerId   String? @map("customer_id") @db.Uuid
-  csrfToken    String @map("csrf_token")
-  expiresAt    DateTime @map("expires_at") @db.Timestamptz(3)
-  idleExpiresAt DateTime @map("idle_expires_at") @db.Timestamptz(3)
-  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(3)
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  user         User? @relation(fields: [userId], references: [id])
-  customer     Customer? @relation(fields: [customerId], references: [id])
+  id            String         @id @default(uuid()) @map("session_id") @db.Uuid
+  kind          SessionKind
+  userId        String?        @map("user_id") @db.Uuid
+  customerId    String?        @map("customer_id") @db.Uuid
+  csrfToken     String         @map("csrf_token")
+  expiresAt     DateTime       @map("expires_at") @db.Timestamptz(3)
+  idleExpiresAt DateTime       @map("idle_expires_at") @db.Timestamptz(3)
+  revokedAt     DateTime?      @map("revoked_at") @db.Timestamptz(3)
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  user          User?          @relation(fields: [userId], references: [id])
+  customer      Customer?      @relation(fields: [customerId], references: [id])
   refreshTokens RefreshToken[]
+
   @@index([userId, revokedAt])
   @@index([customerId, revokedAt])
   @@map("auth_sessions")
 }
 
 model RefreshToken {
-  id         String @id @default(uuid()) @map("refresh_token_id") @db.Uuid
-  tokenHash  String @unique @map("token_hash")
-  sessionId  String @map("session_id") @db.Uuid
-  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  id         String      @id @default(uuid()) @map("refresh_token_id") @db.Uuid
+  tokenHash  String      @unique @map("token_hash")
+  sessionId  String      @map("session_id") @db.Uuid
+  consumedAt DateTime?   @map("consumed_at") @db.Timestamptz(3)
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   session    AuthSession @relation(fields: [sessionId], references: [id])
+
   @@index([sessionId])
   @@map("refresh_tokens")
 }
 
 model OtpChallenge {
-  id          String @id @default(uuid()) @map("challenge_id") @db.Uuid
-  phone       String
-  purpose     String @default("CUSTOMER_LOGIN")
-  codeHash    String @map("code_hash")
-  attempts    Int @default(0)
-  expiresAt   DateTime @map("expires_at") @db.Timestamptz(3)
-  consumedAt  DateTime? @map("consumed_at") @db.Timestamptz(3)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  id         String    @id @default(uuid()) @map("challenge_id") @db.Uuid
+  phone      String
+  purpose    String    @default("CUSTOMER_LOGIN")
+  codeHash   String    @map("code_hash")
+  attempts   Int       @default(0)
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(3)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
   @@index([phone, createdAt])
   @@map("otp_challenges")
 }
 
 model RateLimitBucket {
-  key         String @id
-  count       Int
-  expiresAt   DateTime @map("expires_at") @db.Timestamptz(3)
+  key       String   @id
+  count     Int
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+
   @@index([expiresAt])
   @@map("rate_limit_buckets")
 }
 
 model AuditLog {
-  id          String @id @default(uuid()) @map("audit_id") @db.Uuid
-  actorId     String @map("actor_id") @db.Uuid
-  targetId    String @map("target_id") @db.Uuid
-  action      String
-  reason      String
-  details     Json
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  id        String   @id @default(uuid()) @map("audit_id") @db.Uuid
+  actorId   String   @map("actor_id") @db.Uuid
+  targetId  String   @map("target_id") @db.Uuid
+  action    String
+  reason    String
+  details   Json
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
   @@index([targetId, createdAt])
   @@map("audit_logs")
 }
