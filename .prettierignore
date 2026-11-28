@@ -1,0 +1,11 @@
+node_modules/
+dist/
+src/generated/
+package-lock.json
+doc/.me/
+doc/00_*.md
+doc/01_*.md
+doc/02_*.md
+doc/03_*.md
+doc/04_*.md
+.data/

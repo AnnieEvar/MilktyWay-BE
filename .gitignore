@@ -150,3 +150,7 @@ vite.config.ts.timestamp-*
 
 # Personal work notes and progress tracking (local only)
 /doc/.me/
+
+# Generated clients and local test/development data
+/src/generated/
+/.data/
