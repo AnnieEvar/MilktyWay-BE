@@ -16,6 +16,7 @@ import {
   createPrismaBranchRepository,
   createPrismaBranchUnitOfWork,
 } from "../modules/branch/infrastructure/prisma-branch.repository.js";
+import { createR2ImageStorage } from "../shared/infrastructure/storage/r2-image-storage.js";
 
 export async function createContainer(
   config: Config,
@@ -50,5 +51,6 @@ export async function createContainer(
     identity: service,
     clock: overrides.clock ?? (() => new Date()),
   });
-  return { service, branchService, repository, unitOfWork, passwords, tokens };
+  const imageStorage = config.R2_ENABLED ? createR2ImageStorage(config) : null;
+  return { service, branchService, repository, unitOfWork, passwords, tokens, imageStorage };
 }

@@ -10,7 +10,7 @@ try {
   const config = loadConfig(process.env);
   const prisma = createPrismaClient(config.DATABASE_URL, config.DB_POOL_MAX);
   await prisma.$connect();
-  const { service, branchService } = await createContainer(config, prisma);
+  const { service, branchService, imageStorage } = await createContainer(config, prisma);
   const app = createApp({
     config,
     service,
@@ -29,6 +29,7 @@ try {
     shuttingDown = true;
     const deadline = setTimeout(() => process.exit(1), 10_000).unref();
     server.close(() => {
+      imageStorage?.close();
       void prisma.$disconnect().then(() => {
         clearTimeout(deadline);
       });
